@@ -10,7 +10,7 @@ download_url="https://nodejs.org/dist/v$version/node-v$version-$os-$cpu.tar.xz"
 
 curl $download_url --silent --fail --retry 5 --retry-max-time 15 -o /tmp/node.tar.xz
 echo "Downloaded [$download_url]"
-tar xJf /tmp/node.tar.gz -C /tmp
+tar xJf /tmp/node.tar.xz -C /tmp
 rm -rf $dir/*
 mv /tmp/node-v$version-$os-$cpu/* $dir
 chmod +x $dir/bin/*
