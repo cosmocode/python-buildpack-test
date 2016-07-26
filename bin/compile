@@ -240,7 +240,7 @@ source $BIN_DIR/steps/gdal
 source $BIN_DIR/steps/pip-install
 
 # Install node and npm packages
-source $BUILD_DIR/build.sh
+source $BIN_DIR/steps/node-install
 
 # Django collectstatic support.
 sub-env $BIN_DIR/steps/collectstatic

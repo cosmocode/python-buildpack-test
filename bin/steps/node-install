@@ -1,0 +1,20 @@
+# Install node.js
+
+set -x
+
+local dir="$BUILD_DIR/.heroku/node"
+local version="6.3.1"
+local os="linux"
+local cpu="x64"
+local download_url="https://nodejs.org/dist/v$version/node-v$version-$os-$cpu.tar.xz"
+
+curl $download_url --silent --fail --retry 5 --retry-max-time 15 -o /tmp/node.tar.xz
+echo "Downloaded [$download_url]"
+tar xJf /tmp/node.tar.gz -C /tmp
+rm -rf $dir/*
+mv /tmp/node-v$version-$os-$cpu/* $dir
+chmod +x $dir/bin/*
+
+$dir/bin/node build
+
+echo
