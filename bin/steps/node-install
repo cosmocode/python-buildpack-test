@@ -2,11 +2,11 @@
 
 set -x
 
-local dir="$BUILD_DIR/.heroku/node"
-local version="6.3.1"
-local os="linux"
-local cpu="x64"
-local download_url="https://nodejs.org/dist/v$version/node-v$version-$os-$cpu.tar.xz"
+dir="$BUILD_DIR/.heroku/node"
+version="6.3.1"
+os="linux"
+cpu="x64"
+download_url="https://nodejs.org/dist/v$version/node-v$version-$os-$cpu.tar.xz"
 
 curl $download_url --silent --fail --retry 5 --retry-max-time 15 -o /tmp/node.tar.xz
 echo "Downloaded [$download_url]"
