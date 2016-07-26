@@ -17,7 +17,7 @@ export PATH=/app/.heroku/node/bin:$PATH
 
 if test -f $BUILD_DIR/build.js; then
     $dir/bin/node build
-    find . -maxdepth 4 -type d -name "node_modules"
+    find . -maxdepth 4 -type d -name "node_modules" -exec rm -rf {} \;
 fi
 
 rm -rf $dir
