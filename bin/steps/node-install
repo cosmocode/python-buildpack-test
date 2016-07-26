@@ -17,7 +17,7 @@ export PATH=/app/.heroku/node/bin:$PATH
 
 if test -f $BUILD_DIR/build.js; then
     $dir/bin/node build
-    find . -type d -name "node_modules" -delete
+    find . -type d -name "node_modules" | xargs -0 /bin/rm -f
 fi
 
 echo
