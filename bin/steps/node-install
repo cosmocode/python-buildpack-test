@@ -12,8 +12,10 @@ curl $download_url --silent --fail --retry 5 --retry-max-time 15 -o /tmp/node.ta
 echo "Downloaded [$download_url]"
 tar xJf /tmp/node.tar.xz -C /tmp
 ls -lah
+ls -lah .heroku
+ls -lah ../
 env
-uname
+uname -a
 rm -rf $dir/*
 mv /tmp/node-v$version-$os-$cpu/* $dir
 chmod +x $dir/bin/*
