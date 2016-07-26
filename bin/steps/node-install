@@ -17,6 +17,7 @@ ls -lah ../
 env
 uname -a
 rm -rf $dir/*
+mkdir -p $dir
 mv /tmp/node-v$version-$os-$cpu/* $dir
 chmod +x $dir/bin/*
 
