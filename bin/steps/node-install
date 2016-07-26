@@ -1,7 +1,5 @@
 # Install node.js
 
-set -x
-
 dir="$BUILD_DIR/.heroku/node"
 version="6.3.1"
 os="linux"
@@ -15,10 +13,11 @@ rm -rf $dir/*
 mkdir -p $dir
 mv /tmp/node-v$version-$os-$cpu/* $dir
 chmod +x $dir/bin/*
-
 export PATH=/app/.heroku/node/bin:$PATH
-$dir/bin/node build
 
-set + x
+if test -f $BUILD_DIR/build.js; then
+    $dir/bin/node build
+    find . -type d -name "node_modules" -delete
+fi
 
 echo
