@@ -11,16 +11,14 @@ download_url="https://nodejs.org/dist/v$version/node-v$version-$os-$cpu.tar.xz"
 curl $download_url --silent --fail --retry 5 --retry-max-time 15 -o /tmp/node.tar.xz
 echo "Downloaded [$download_url]"
 tar xJf /tmp/node.tar.xz -C /tmp
-ls -lah
-ls -lah .heroku
-ls -lah ../
-env
-uname -a
 rm -rf $dir/*
 mkdir -p $dir
 mv /tmp/node-v$version-$os-$cpu/* $dir
 chmod +x $dir/bin/*
 
+export PATH=/app/.heroku/node/bin:$PATH
 $dir/bin/node build
+
+set + x
 
 echo
