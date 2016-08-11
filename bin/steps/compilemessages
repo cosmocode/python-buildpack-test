@@ -12,7 +12,7 @@
 
 source $BIN_DIR/utils
 
-ls -lah /app/*
+ls -lah /tmp/buildpack/*
 
 cp $ROOT_DIR/vendor/msgfmt $BUILD_DIR/.heroku/vendor/bin/
 
