@@ -26,9 +26,9 @@ if [ ! -d $TARGET_DIR/gettext ]; then
     pushd $BUILD_DIR >/dev/null
     rm -f tmp-gettext.tar.xz
 
-    curl -s -L -o tmp-gettext.tar.gz "$GETTEXT_TARBALL"
+    curl -s -L -o tmp-gettext.tar.xz "$GETTEXT_TARBALL"
     tar -zJvf tmp-gettext.tar.xz > /dev/null
-    rm tmp-gettext.tar.gz
+    rm tmp-gettext.tar.xz
     popd >/dev/null
 
     export PATH=$BUILD_DIR/gettext/bin:$PATH
