@@ -12,8 +12,7 @@
 
 source $BIN_DIR/utils
 
-ls -lah /tmp/buildpack/*
-
+mkdir $BUILD_DIR/.heroku/vendor/bin/ -p
 cp /tmp/buildpack/vendor/msgfmt $BUILD_DIR/.heroku/vendor/bin/
 
 # Location of 'manage.py', if it exists.
