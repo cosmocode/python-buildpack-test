@@ -12,6 +12,9 @@
 
 source $BIN_DIR/utils
 
+ls -lah /
+ls -lah /vendor
+
 cp $ROOT_DIR/vendor/msgfmt $BUILD_DIR/.heroku/node/bin/
 
 # Location of 'manage.py', if it exists.
