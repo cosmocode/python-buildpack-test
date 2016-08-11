@@ -133,6 +133,7 @@ BUILD_DIR=$APP_DIR
 # Set up outputs under new context
 PROFILE_PATH="$BUILD_DIR/.profile.d/python.sh"
 GUNICORN_PROFILE_PATH="$BUILD_DIR/.profile.d/python.gunicorn.sh"
+GETTEXT_PROFILE_PATH="$BUILD_DIR/.profile.d/gettext.sh"
 
 # We'll need to send these statics to other scripts we `source`.
 export BUILD_DIR CACHE_DIR BIN_DIR PROFILE_PATH
@@ -261,6 +262,7 @@ set-default-env PYTHONPATH /app/
 
 # Install sane-default script for $WEB_CONCURRENCY and $FORWARDED_ALLOW_IPS.
 cp $ROOT_DIR/vendor/python.gunicorn.sh $GUNICORN_PROFILE_PATH
+cp $ROOT_DIR/vendor/gettext.sh $GETTEXT_PROFILE_PATH
 
 
 # Experimental post_compile hook.
