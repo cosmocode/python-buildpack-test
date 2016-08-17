@@ -244,7 +244,7 @@ source $BIN_DIR/steps/pip-install
 source $BIN_DIR/steps/node-install
 
 # Django compilemessages support.
-sub-env $BIN_DIR/steps/compilemessages
+#sub-env $BIN_DIR/steps/compilemessages
 
 # Django collectstatic support.
 sub-env $BIN_DIR/steps/collectstatic
