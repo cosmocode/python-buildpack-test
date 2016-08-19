@@ -35,6 +35,12 @@ cp -r $ROOT_DIR $TMP_ROOT
 ROOT_DIR=$TMP_ROOT
 cd $ROOT_DIR
 
+# CF Common
+BUILDPACK_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )"/.. && pwd )"
+export BUILDPACK_PATH
+source $BUILDPACK_PATH/compile-extensions/lib/common
+# END CF Common
+
 # Static configurations for virtualenv caches.
 VIRTUALENV_LOC=".heroku/venv"
 LEGACY_TRIGGER="lib/python2.7"
