@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 
-# The Heroku Python Buildpack. This script accepts parameters for a build
+# The Cloud Foundry Python Buildpack. This script accepts parameters for a build
 # directory, a cache directory, and a directory for app environment variables.
-
-# Warning: there are a few hacks in this script to accommodate excellent builds
-# on Heroku. No guarantee for external compatibility is made. However,
-# everything should work fine outside of the Heroku environment, if the
-# environment is setup correctly.
 
 # Usage:
 #
@@ -27,6 +22,15 @@ BUILD_DIR=$1
 CACHE_DIR=$2
 ENV_DIR=$3
 
+# Use miniconda if environment.yml exists and exit
+if [ -f $BUILD_DIR/environment.yml ]; then
+  echo "----------------- USING CONDA BUILDPACK -----------------"
+  $BIN_DIR/steps/conda-install $BUILD_DIR $CACHE_DIR
+  exit 0
+fi
+
+$ROOT_DIR/compile-extensions/bin/check_stack_support
+
 # The ROOT_DIR is read only so we can't install dependencies in it
 # Move the ROOT_DIR contents to tmp and point ROOT_DIR to the new root
 TMP_ROOT=/tmp/buildpack
@@ -34,6 +38,11 @@ rm -rf $TMP_ROOT
 cp -r $ROOT_DIR $TMP_ROOT
 ROOT_DIR=$TMP_ROOT
 cd $ROOT_DIR
+
+# Cloud Foundry does not have support for Logplex.
+function bpwatch() {
+  :
+}
 
 # CF Common
 BUILDPACK_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )"/.. && pwd )"
@@ -45,37 +54,72 @@ source $BUILDPACK_PATH/compile-extensions/lib/common
 VIRTUALENV_LOC=".heroku/venv"
 LEGACY_TRIGGER="lib/python2.7"
 
-DEFAULT_PYTHON_VERSION="python-2.7.11"
-DEFAULT_PYTHON_STACK="cedar-14"
+DEFAULT_PYTHON_VERSION="python-$($BUILDPACK_PATH/compile-extensions/bin/default_version_for $BUILDPACK_PATH/manifest.yml python)"
 PYTHON_EXE="/app/.heroku/python/bin/python"
-PIP_VERSION="8.1.2"
-SETUPTOOLS_VERSION="20.4"
+PIP_VERSION="9.1.0"
+SETUPTOOLS_VERSION="25.2.0"
 
 # Common Problem Warnings
 export WARNINGS_LOG=$(mktemp)
 export RECOMMENDED_PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
 
+# Setup bpwatch
+export PATH=$PATH:$ROOT_DIR/vendor/bpwatch
+LOGPLEX_KEY="t.b90d9d29-5388-4908-9737-b4576af1d4ce"
+export BPWATCH_STORE_PATH=$CACHE_DIR/bpwatch.json
 BUILDPACK_VERSION=v28
 
 # Setup pip-pop (pip-diff)
 export PATH=$PATH:$ROOT_DIR/vendor/pip-pop
 
+# Support Anvil Build_IDs
+[ ! "$SLUG_ID" ] && SLUG_ID="defaultslug"
+[ ! "$REQUEST_ID" ] && REQUEST_ID=$SLUG_ID
+[ ! "$STACK" ] && STACK=$DEFAULT_PYTHON_STACK
+[[ $BUILD_DIR == "/app" ]] && SKIP_MOVE_BUILD=1
+
 # Sanitizing environment variables.
-unset GIT_DIR PYTHONHOME PYTHONPATH LD_LIBRARY_PATH LIBRARY_PATH
+unset GIT_DIR PYTHONHOME PYTHONPATH
 unset RECEIVE_DATA RUN_KEY BUILD_INFO DEPLOY LOG_TOKEN DYNO
 unset CYTOKINE_LOG_FILE GEM_PATH
 
+# Setup buildpack instrumentation.
+bpwatch init $LOGPLEX_KEY
+bpwatch build python $BUILDPACK_VERSION $REQUEST_ID
+TMP_APP_DIR=$CACHE_DIR/tmp_app_dir
+
+bpwatch start compile
+
 # Syntax sugar.
 source $BIN_DIR/utils
+
+# Import collection of warnings.
+source $BIN_DIR/warnings
 
 # Directory Hacks for path consistency.
 APP_DIR='/app'
 TMP_APP_DIR=$CACHE_DIR/tmp_app_dir
 
-if [[ ! "$DOCKER_BUILD" ]]; then
-  deep-rm $APP_DIR
-  deep-cp $BUILD_DIR $APP_DIR
+
+# Skip these steps for Docker.
+if [[ ! "$SKIP_MOVE_BUILD" ]]; then
+
+  # Copy Anvil app dir to temporary storage...
+  bpwatch start anvil_appdir_stage
+  if [ "$SLUG_ID" ]; then
+    mkdir -p $TMP_APP_DIR
+    deep-mv $APP_DIR $TMP_APP_DIR
+  else
+    deep-rm $APP_DIR
+  fi
+  bpwatch stop anvil_appdir_stage
+
+  # Copy Application code in.
+  bpwatch start appdir_stage
+    deep-cp $BUILD_DIR $APP_DIR
+  bpwatch stop appdir_stage
 fi
+
 
 # Set new context.
 ORIG_BUILD_DIR=$BUILD_DIR
@@ -83,11 +127,11 @@ BUILD_DIR=$APP_DIR
 
 # Set up outputs under new context
 PROFILE_PATH="$BUILD_DIR/.profile.d/python.sh"
+EXPORT_PATH="$BIN_DIR/../export"
 GUNICORN_PROFILE_PATH="$BUILD_DIR/.profile.d/python.gunicorn.sh"
-GETTEXT_PROFILE_PATH="$BUILD_DIR/.profile.d/gettext.sh"
 
 # We'll need to send these statics to other scripts we `source`.
-export BUILD_DIR CACHE_DIR BIN_DIR PROFILE_PATH
+export BUILD_DIR CACHE_DIR BIN_DIR PROFILE_PATH EXPORT_PATH
 
 # Prepend proper environment variables for Python use.
 export PATH=$BUILD_DIR/.heroku/python/bin:$BUILD_DIR/.heroku/vendor/bin:$PATH
@@ -104,12 +148,20 @@ cd $BUILD_DIR
 
 # Warn for lack of Procfile.
 if [[ ! -f Procfile ]]; then
-  puts-warn 'Warning: Your application is missing a Procfile. This file tells Heroku how to run your application.'
-  puts-warn 'Learn more: https://devcenter.heroku.com/articles/procfile'
+  puts-warn 'Warning: Your application is missing a Procfile. This file tells Cloud Foundry how to run your application.'
+  puts-warn 'Learn more: https://docs.cloudfoundry.org/buildpacks/prod-server.html#procfile'
 fi
 
 # Experimental pre_compile hook.
-source $BIN_DIR/steps/hooks/pre_compile
+bpwatch start pre_compile
+  source $BIN_DIR/steps/hooks/pre_compile
+bpwatch stop pre_compile
+
+# If no requirements.txt file given, assume `setup.py develop` is intended.
+if [ ! -f requirements.txt ]; then
+  echo "-e ." > requirements.txt
+fi
+
 
 # Sticky runtimes.
 if [ -f $CACHE_DIR/.heroku/python-version ]; then
@@ -132,17 +184,22 @@ fi
 mkdir -p $CACHE_DIR
 
 # Purge "old-style" virtualenvs.
-[ -d $CACHE_DIR/$LEGACY_TRIGGER ] && rm -fr $CACHE_DIR/.heroku/bin $CACHE_DIR/.heroku/lib $CACHE_DIR/.heroku/include
-[ -d $CACHE_DIR/$VIRTUALENV_LOC ] && rm -fr $CACHE_DIR/.heroku/venv $CACHE_DIR/.heroku/src
+bpwatch start clear_old_venvs
+  [ -d $CACHE_DIR/$LEGACY_TRIGGER ] && rm -fr $CACHE_DIR/.heroku/bin $CACHE_DIR/.heroku/lib $CACHE_DIR/.heroku/include
+  [ -d $CACHE_DIR/$VIRTUALENV_LOC ] && rm -fr $CACHE_DIR/.heroku/venv $CACHE_DIR/.heroku/src
+bpwatch stop clear_old_venvs
 
 # Restore old artifacts from the cache.
-mkdir -p .heroku
+bpwatch start restore_cache
+    mkdir -p .heroku
 
-cp -R $CACHE_DIR/.heroku/python .heroku/ &> /dev/null || true
-cp -R $CACHE_DIR/.heroku/python-stack .heroku/ &> /dev/null || true
-cp -R $CACHE_DIR/.heroku/python-version .heroku/ &> /dev/null || true
-cp -R $CACHE_DIR/.heroku/vendor .heroku/ &> /dev/null || true
-cp -R $CACHE_DIR/.heroku/venv .heroku/ &> /dev/null || true
+    cp -R $CACHE_DIR/.heroku/python .heroku/ &> /dev/null || true
+    cp -R $CACHE_DIR/.heroku/python-stack .heroku/ &> /dev/null || true
+    cp -R $CACHE_DIR/.heroku/python-version .heroku/ &> /dev/null || true
+    cp -R $CACHE_DIR/.heroku/vendor .heroku/ &> /dev/null || true
+    cp -R $CACHE_DIR/.heroku/venv .heroku/ &> /dev/null || true
+
+bpwatch stop restore_cache
 
 set +e
 # Create set-aside `.heroku` folder.
@@ -160,14 +217,26 @@ source $BIN_DIR/steps/setuptools
 # Uninstall removed dependencies with Pip.
 source $BIN_DIR/steps/pip-uninstall
 
+# Mercurial support.
+source $BIN_DIR/steps/mercurial
+
+# Pylibmc support.
+source $BIN_DIR/steps/pylibmc
+
+# Libffi support.
+source $BIN_DIR/steps/cryptography
+
+# Support for Geo libraries.
+sub-env $BIN_DIR/steps/geo-libs
+
+# GDAL support.
+source $BIN_DIR/steps/gdal
+
+# SAP HANA SDK support.
+source $BIN_DIR/steps/java
+
 # Install dependencies with Pip.
 source $BIN_DIR/steps/pip-install
-
-# Install node and npm packages
-#source $BIN_DIR/steps/node-install
-
-# Django compilemessages support.
-#sub-env $BIN_DIR/steps/compilemessages
 
 # Django collectstatic support.
 sub-env $BIN_DIR/steps/collectstatic
@@ -185,29 +254,48 @@ set-default-env PYTHONPATH /app/
 
 # Install sane-default script for $WEB_CONCURRENCY and $FORWARDED_ALLOW_IPS.
 cp $ROOT_DIR/vendor/python.gunicorn.sh $GUNICORN_PROFILE_PATH
-cp $ROOT_DIR/vendor/gettext.sh $GETTEXT_PROFILE_PATH
 
 
 # Experimental post_compile hook.
-source $BIN_DIR/steps/hooks/post_compile
+bpwatch start post_compile
+  source $BIN_DIR/steps/hooks/post_compile
+bpwatch stop post_compile
 
 # Store new artifacts in cache.
-rm -rf $CACHE_DIR/.heroku/python
-rm -rf $CACHE_DIR/.heroku/python-version
-rm -rf $CACHE_DIR/.heroku/python-stack
-rm -rf $CACHE_DIR/.heroku/vendor
-rm -rf $CACHE_DIR/.heroku/venv
+bpwatch start dump_cache
 
-mkdir -p $CACHE_DIR/.heroku
-cp -R .heroku/python $CACHE_DIR/.heroku/
-cp -R .heroku/python-version $CACHE_DIR/.heroku/
-cp -R .heroku/python-stack $CACHE_DIR/.heroku/ &> /dev/null || true
-cp -R .heroku/vendor $CACHE_DIR/.heroku/ &> /dev/null || true
-cp -R .heroku/venv $CACHE_DIR/.heroku/ &> /dev/null || true
+  rm -rf $CACHE_DIR/.heroku/python
+  rm -rf $CACHE_DIR/.heroku/python-version
+  rm -rf $CACHE_DIR/.heroku/python-stack
+  rm -rf $CACHE_DIR/.heroku/vendor
+  rm -rf $CACHE_DIR/.heroku/venv
+  rm -rf $CACHE_DIR/.heroku/java
+  rm -rf $CACHE_DIR/.heroku/neo
 
+  mkdir -p $CACHE_DIR/.heroku
+  cp -R .heroku/python $CACHE_DIR/.heroku/
+  cp -R .heroku/python-version $CACHE_DIR/.heroku/
+  cp -R .heroku/python-stack $CACHE_DIR/.heroku/ &> /dev/null || true
+  cp -R .heroku/vendor $CACHE_DIR/.heroku/ &> /dev/null || true
+  cp -R .heroku/venv $CACHE_DIR/.heroku/ &> /dev/null || true
+  cp -R .heroku/java $CACHE_DIR/.heroku/ &> /dev/null || true
+  cp -R .heroku/neo $CACHE_DIR/.heroku/ &> /dev/null || true
+
+bpwatch stop dump_cache
 
 # Fin.
-if [[ ! "$DOCKER_BUILD" ]]; then
-  deep-rm $ORIG_BUILD_DIR
-  deep-mv $BUILD_DIR $ORIG_BUILD_DIR
+if [[ ! "$SKIP_MOVE_BUILD" ]]; then
+
+  bpwatch start appdir_commit
+    deep-rm $ORIG_BUILD_DIR
+    deep-mv $BUILD_DIR $ORIG_BUILD_DIR
+  bpwatch stop appdir_commit
+
+  bpwatch start anvil_appdir_commit
+  if [ "$SLUG_ID" ]; then
+    deep-mv $TMP_APP_DIR $APP_DIR
+  fi
+
+  bpwatch stop anvil_appdir_commit
+  bpwatch stop compile
 fi

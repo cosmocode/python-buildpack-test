@@ -1,3 +1,46 @@
+v1.5.13 Dec 01, 2016
+=====================
+
+* Rebuild and change path for python, libffi, and libmemcache binaries
+  - We identified a potential, but unlikely, attack vector in our continuous
+    integration system. Our own auditing strongly suggests that this attack
+    vector was not taken advantage of. However, out of an abundance of caution,
+    we are rebuilding all buildpack dependencies that we maintain.
+
+v1.5.12 Nov 11, 2016
+=====================
+
+* Ensure all downloaded binaries have checksums verified
+  (https://www.pivotaltracker.com/story/show/128099189)
+
+v1.5.11 Oct 19, 2016
+=====================
+
+* python-buildpack BOSH release now available on bosh.io at
+  http://bosh.io/releases/github.com/cloudfoundry/python-buildpack-release
+  (https://www.pivotaltracker.com/story/show/130040305)
+
+v1.5.10 Sep 19, 2016
+=====================
+
+* Remove Heroku references from staging output
+  (https://www.pivotaltracker.com/story/show/127931269)
+
+* Lock version of conda to 4.1.11
+  (https://www.pivotaltracker.com/story/show/119902339)
+
+v1.5.9 Aug 12, 2016
+====================
+
+* Add credential filtering for printed urls
+  (https://www.pivotaltracker.com/n/projects/1042066/stories/126514693)
+
+* Add default_versions support for specifying python default version
+  (https://www.pivotaltracker.com/n/projects/1042066/stories/126394947)
+
+* Make buildpacks.cloudfoundry.org the default url for buildpack dependencies
+  (https://www.pivotaltracker.com/n/projects/1042066/stories/121757949)
+
 v1.5.8 Jun 28, 2016
 ====================
 

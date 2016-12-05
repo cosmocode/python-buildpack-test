@@ -11,18 +11,18 @@ describe 'CF Python Buildpack' do
   def create_environment_yml(app_name,contents = nil)
     filename = File.join(File.dirname(__FILE__), '..', 'fixtures', app_name, 'environment.yml')
     unless contents
-      contents = <<HERE
-name: pydata_test
-dependencies:
-- pip
-- pytest
-- flask
-- nose
-- numpy=1.10.4
-- scipy=0.17.0
-- scikit-learn=0.17.1
-- pandas=0.18.0
-HERE
+      contents = <<~HERE
+                    name: pydata_test
+                    dependencies:
+                    - pip
+                    - pytest
+                    - flask
+                    - nose
+                    - numpy=1.10.4
+                    - scipy=0.17.0
+                    - scikit-learn=0.17.1
+                    - pandas=0.18.0
+                    HERE
     end
     File.open(filename, 'w') { |file| file.write(contents) }
   end
@@ -96,12 +96,17 @@ HERE
         context 'deploy a flask web app' do
           let(:app_name) { 'flask_web_app' }
 
+          subject(:app) do
+            Machete.deploy_app(app_name, env: {'BP_DEBUG' => '1'})
+          end
+
           specify do
             expect(app).to be_running(60)
 
             browser.visit_path('/')
             expect(browser).to have_body('Hello, World!')
             expect(app).to have_logged(/Downloaded \[https:\/\/.*\]/)
+            expect(app).to have_logged('DEBUG: default_version_for python is')
           end
         end
         context 'deploy a django web app' do
@@ -159,7 +164,7 @@ HERE
         expect(browser).to have_body('Hello, World!')
       end
 
-      it "uses a proxy during staging if present" do
+      it "uses a proxy during staging if present", :uncached do
         expect(app).to use_proxy_during_staging
       end
     end
@@ -178,7 +183,7 @@ HERE
         expect(browser).to have_body('python-version2')
       end
 
-      it "uses a proxy during staging if present" do
+      it "uses a proxy during staging if present", :uncached do
         expect(app).to use_proxy_during_staging
       end
     end
@@ -213,17 +218,17 @@ HERE
         end
 
         it "it updates dependencies if environment.yml changes" do
-          contents = <<HERE
-name: pydata_test
-dependencies:
-- pip
-- pytest
-- flask
-- nose
-- numpy=1.11.0
-- scikit-learn=0.17.1
-- pandas=0.18.0
-HERE
+          contents = <<~HERE
+                        name: pydata_test
+                        dependencies:
+                        - pip
+                        - pytest
+                        - flask
+                        - nose
+                        - numpy=1.11.0
+                        - scikit-learn=0.17.1
+                        - pandas=0.18.0
+                        HERE
           create_environment_yml app_name, contents
           Machete.push(app)
           expect(app).to be_running(120)
@@ -232,7 +237,7 @@ HERE
           expect(browser).to have_body('numpy: 1.11.0')
         end
 
-        it "uses a proxy during staging if present" do
+        it "uses a proxy during staging if present", :uncached do
           expect(app).to use_proxy_during_staging
         end
       end
@@ -249,7 +254,7 @@ HERE
         expect(app).to have_logged "WARNING: you have specified the version of Python runtime both in 'runtime.txt' and 'environment.yml'. You should remove one of the two versions"
       end
 
-      it "uses a proxy during staging if present" do
+      it "uses a proxy during staging if present", :uncached do
         expect(app).to use_proxy_during_staging
       end
     end

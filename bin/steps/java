@@ -1,0 +1,43 @@
+if [ ! "$SKIP_INSTALL" ]; then
+  bpwatch start install_java
+    puts-step "Installing JAVA"
+
+    # Prepare destination directory.
+    mkdir -p .heroku/java
+
+    url="http://download.oracle.com/otn-pub/java/jdk/8u112-b15/jdk-8u112-linux-x64.tar.gz"
+
+    wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" $url -O /tmp/java.tar.gz
+
+    downloaded_file=/tmp/java.tar.gz
+    tar zxvf $downloaded_file -C .heroku/java &> /dev/null
+    rm $downloaded_file
+    echo "Downloaded [$url]"
+
+  bpwatch stop install_java
+
+  hash -r
+fi
+
+if [ ! "$SKIP_INSTALL" ]; then
+  bpwatch start install_neo_sdk
+    puts-step "Installing SAP SDK"
+
+    # Prepare destination directory.
+    mkdir -p .heroku/neo
+
+    url="https://tools.hana.ondemand.com/sdk/neo-java-web-sdk-1.117.22.zip"
+
+    wget --no-check-certificate --no-cookies --header "Cookie: eula_3.1_agreed=tools.hana.ondemand.com/developer-license-3.1.txt" $url -O /tmp/neo.zip
+
+    downloaded_file=/tmp/neo.zip
+    unzip $downloaded_file -d .heroku/neo &> /dev/null
+    rm $downloaded_file
+    echo "Downloaded [$url]"
+
+  bpwatch stop install_neosdk
+
+  hash -r
+fi
+
+hash -r

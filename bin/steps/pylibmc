@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 
 # This script serves as the Pylibmc build step of the
-# [**Python Buildpack**](https://github.com/heroku/heroku-buildpack-python)
+# [**Python Buildpack**](https://github.com/cloudfoundry/python-buildpack)
 # compiler.
-#
-# A [buildpack](https://devcenter.heroku.com/articles/buildpacks) is an
-# adapter between a Python application and Heroku's runtime.
 #
 # This script is invoked by [`bin/compile`](/).
 
@@ -19,15 +16,19 @@ source $BIN_DIR/utils
 # If pylibmc exists within requirements, use vendored libmemcached.
 if (pip-grep -s requirements.txt pylibmc &> /dev/null) then
 
-  if [ -d ".heroku/vendor/lib/sasl2" ]; then
-    export LIBMEMCACHED=$(pwd)/vendor
-  else
+  if [ ! -d ".heroku/vendor/lib/sasl2" ]; then
     echo "-----> Noticed pylibmc. Bootstrapping libmemcached."
     mkdir -p .heroku/vendor
+ 
     # Download and extract libmemcached into target vendor directory.
-    echo "Downloaded [`translate_dependency_url $VENDORED_MEMCACHED`]"
-    curl `translate_dependency_url $VENDORED_MEMCACHED` -s | tar zxv -C .heroku/vendor &> /dev/null
+    exit_code=0
+    filtered_url=$($ROOT_DIR/compile-extensions/bin/download_dependency $VENDORED_MEMCACHED /tmp)
+    echo "Downloaded [$filtered_url]"
 
-    export LIBMEMCACHED=$(pwd)/vendor
+    downloaded_file=/tmp/libmemcache.tar.gz
+    tar zxvf $downloaded_file -C .heroku/vendor &> /dev/null
+    rm $downloaded_file
   fi
+
+  export LIBMEMCACHED=$(pwd)/vendor
 fi

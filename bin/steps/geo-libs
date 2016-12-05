@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 
 # This script serves as the GDAL build step of the
-# [**Python Buildpack**](https://github.com/heroku/heroku-buildpack-python)
+# [**Python Buildpack**](https://github.com/cloudfoundry/python-buildpack)
 # compiler.
-#
-# A [buildpack](https://devcenter.heroku.com/articles/buildpacks) is an
-# adapter between a Python application and Heroku's runtime.
 #
 # This script is invoked by [`bin/compile`](/).
 
@@ -24,18 +21,16 @@ bpwatch start geo_libs_install
 # If GDAL exists within requirements, use vendored gdal.
 if [[ "$BUILD_WITH_GEO_LIBRARIES" ]]; then
 
-  if [ -f ".heroku/vendor/bin/gdalserver" ]; then
-    export GDAL=$(pwd)/vendor
-  else
+  if [ ! -f ".heroku/vendor/bin/proj" ]; then
     echo "-----> Bootstrapping gdal, geos, proj."
     mkdir -p .heroku/vendor
     # Download and extract cryptography into target vendor directory.
     curl $VENDORED_GDAL -s | tar zxv -C .heroku/vendor &> /dev/null
     curl $VENDORED_GEOS -s | tar zxv -C .heroku/vendor &> /dev/null
     curl $VENDORED_PROJ -s | tar zxv -C .heroku/vendor &> /dev/null
-
-    export GDAL=$(pwd)/vendor
   fi
+
+  export GDAL=$(pwd)/vendor
 fi
 
 bpwatch stop geo_libs_install
