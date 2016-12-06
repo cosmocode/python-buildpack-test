@@ -1,3 +1,4 @@
+puts-cmd "JAVA"
 if [ ! "$SKIP_INSTALL" ]; then
   bpwatch start install_java
     puts-step "Installing JAVA"
@@ -7,6 +8,7 @@ if [ ! "$SKIP_INSTALL" ]; then
 
     url="http://download.oracle.com/otn-pub/java/jdk/8u112-b15/jdk-8u112-linux-x64.tar.gz"
 
+    puts-cmd "Downloading JAVA"
     wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" $url -O /tmp/java.tar.gz
 
     downloaded_file=/tmp/java.tar.gz
@@ -28,6 +30,7 @@ if [ ! "$SKIP_INSTALL" ]; then
 
     url="https://tools.hana.ondemand.com/sdk/neo-java-web-sdk-1.117.22.zip"
 
+    puts-cmd "Downloading SDK"
     wget --no-check-certificate --no-cookies --header "Cookie: eula_3.1_agreed=tools.hana.ondemand.com/developer-license-3.1.txt" $url -O /tmp/neo.zip
 
     downloaded_file=/tmp/neo.zip
